@@ -20,11 +20,18 @@
       <canvas id="minimap-canvas" width="176" height="132"></canvas>
     </div>
 
+    <div id="step-controls" hidden>
+      <button id="step-next" type="button">next</button>
+      <button id="step-reset" type="button">reiniciar</button>
+      <span id="step-depth">iteracion 0</span>
+    </div>
+
     <div id="toolbar">
       <div id="forms"></div>
       <button id="clear" type="button">borrar colores</button>
       <button id="julia" type="button">ir a Julia</button>
       <button id="back" type="button" hidden>volver a Mandelbrot</button>
+      <button id="step" type="button" aria-pressed="false">paso a paso</button>
       <button id="inspect-toggle" type="button" aria-pressed="false">?</button>
     </div>
 

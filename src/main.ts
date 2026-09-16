@@ -27,6 +27,11 @@ class FractalApp extends InputListener {
   private readonly juliaButton: HTMLButtonElement;
   private readonly backButton: HTMLButtonElement;
   private readonly inspectButton: HTMLButtonElement;
+  private readonly stepButton: HTMLButtonElement;
+  private readonly stepControls: HTMLElement;
+  private readonly stepNextButton: HTMLButtonElement;
+  private readonly stepResetButton: HTMLButtonElement;
+  private readonly stepDepthElement: HTMLElement;
   private imageWidth = 1;
   private imageHeight = 1;
   private inspection = false;
@@ -48,10 +53,18 @@ class FractalApp extends InputListener {
     this.juliaButton = Dom.require<HTMLButtonElement>(document, "#julia");
     this.backButton = Dom.require<HTMLButtonElement>(document, "#back");
     this.inspectButton = Dom.require<HTMLButtonElement>(document, "#inspect-toggle");
+    this.stepButton = Dom.require<HTMLButtonElement>(document, "#step");
+    this.stepControls = Dom.require<HTMLElement>(document, "#step-controls");
+    this.stepNextButton = Dom.require<HTMLButtonElement>(document, "#step-next");
+    this.stepResetButton = Dom.require<HTMLButtonElement>(document, "#step-reset");
+    this.stepDepthElement = Dom.require<HTMLElement>(document, "#step-depth");
 
     this.juliaButton.addEventListener("click", () => this.beginJuliaPick());
     this.backButton.addEventListener("click", () => this.returnToMandelbrot());
     this.inspectButton.addEventListener("click", () => this.toggleInspection());
+    this.stepButton.addEventListener("click", () => this.toggleStepMode());
+    this.stepNextButton.addEventListener("click", () => this.advanceStep());
+    this.stepResetButton.addEventListener("click", () => this.resetStep());
     Dom.require<HTMLButtonElement>(document, "#clear").addEventListener("click", () =>
       this.clearColors(),
     );
@@ -85,6 +98,9 @@ class FractalApp extends InputListener {
       this.pickingJulia = false;
       this.updateChrome();
       this.requestRender();
+      return;
+    }
+    if (this.session.isStepMode()) {
       return;
     }
     this.session.paintAt(x, y);
@@ -130,7 +146,7 @@ class FractalApp extends InputListener {
   private redraw(): void {
     const map = this.session.currentZoneMap();
     if (map) {
-      this.renderer.render(map, this.session.paletteRef());
+      this.renderer.render(map, this.session.paletteRef(), this.session.revealState());
     }
   }
 
@@ -148,6 +164,40 @@ class FractalApp extends InputListener {
     if (julia) {
       this.miniMap.draw(this.session.seedValue());
     }
+
+    const stepping = this.session.isStepMode();
+    this.stepButton.classList.toggle("active", stepping);
+    this.stepButton.setAttribute("aria-pressed", String(stepping));
+    this.stepControls.hidden = !stepping;
+    this.updateStepIndicator();
+  }
+
+  private updateStepIndicator(): void {
+    const reveal = this.session.revealState();
+    this.stepDepthElement.textContent = reveal ? `iteracion ${reveal.currentDepth()}` : "";
+  }
+
+  private toggleStepMode(): void {
+    if (this.session.isStepMode()) {
+      this.session.exitStepMode();
+    } else {
+      this.session.enterStepMode();
+    }
+    this.updateChrome();
+    this.redraw();
+  }
+
+  private advanceStep(): void {
+    if (this.session.nextStep()) {
+      this.updateStepIndicator();
+      this.redraw();
+    }
+  }
+
+  private resetStep(): void {
+    this.session.resetSteps();
+    this.updateStepIndicator();
+    this.redraw();
   }
 
   private selectFormula(id: FormulaId): void {

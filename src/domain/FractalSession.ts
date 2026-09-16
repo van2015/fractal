@@ -12,6 +12,7 @@ import { ZoneMap, UNCOMPUTED_ZONE } from "./ZoneMap.ts";
 import { Palette } from "./Palette.ts";
 import { ColorChooser } from "./ColorChooser.ts";
 import { IterationSchedule } from "./IterationSchedule.ts";
+import { StepReveal } from "./StepReveal.ts";
 import type { Rgb } from "./Rgb.ts";
 
 const ESCAPE_RADIUS_SQUARED = 4;
@@ -29,6 +30,7 @@ export class FractalSession {
   private readonly mandelbrotViewport: Viewport;
   private readonly juliaViewport: Viewport;
   private currentMap: ZoneMap | null;
+  private reveal: StepReveal | null = null;
 
   constructor() {
     this.catalog = new FormulaCatalog();
@@ -102,12 +104,38 @@ export class FractalSession {
     this.chooser.reset();
   }
 
+  enterStepMode(): void {
+    this.reveal = new StepReveal(this.schedule.maxIterations(this.zoomFactor()));
+  }
+
+  exitStepMode(): void {
+    this.reveal = null;
+  }
+
+  isStepMode(): boolean {
+    return this.reveal !== null;
+  }
+
+  revealState(): StepReveal | null {
+    return this.reveal;
+  }
+
+  nextStep(): boolean {
+    return this.reveal ? this.reveal.advance() : false;
+  }
+
+  resetSteps(): void {
+    this.reveal?.reset();
+  }
+
   scene(width: number, height: number): FractalScene {
+    const maxIterations = this.schedule.maxIterations(this.zoomFactor());
+    this.reveal?.setMaxIterations(maxIterations);
     return new FractalScene(
       this.formula(),
       this.mode,
       this.seed,
-      this.schedule.maxIterations(this.zoomFactor()),
+      maxIterations,
       this.escapeRadiusSquared,
       this.viewport(),
     );

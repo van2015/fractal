@@ -38,7 +38,7 @@ export class RenderScheduler {
     map.copyUpsampledFrom(coarse);
 
     this.session.setCurrentMap(map);
-    this.renderer.render(map, this.session.paletteRef());
+    this.renderer.render(map, this.session.paletteRef(), this.session.revealState());
 
     this.scheduleFine(scene, map);
   }
@@ -66,7 +66,13 @@ export class RenderScheduler {
         y += ROW_CHUNK;
       } while (y < this.height && performance.now() < deadline);
 
-      this.renderer.renderRows(map, this.session.paletteRef(), firstRow, Math.min(y, this.height));
+      this.renderer.renderRows(
+        map,
+        this.session.paletteRef(),
+        firstRow,
+        Math.min(y, this.height),
+        this.session.revealState(),
+      );
 
       if (y < this.height) {
         this.handle = window.requestAnimationFrame(runChunk);

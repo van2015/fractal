@@ -98,3 +98,55 @@ test("las zonas visibles excluyen los pixeles sin calcular", () => {
   const map = session.render(WIDTH, HEIGHT, 4);
   assert.equal(session.visibleZones(map).includes(UNCOMPUTED_ZONE), false);
 });
+
+test("activar la seccion de paso a paso entra en profundidad 0", () => {
+  const session = new FractalSession();
+  assert.equal(session.isStepMode(), false);
+  session.enterStepMode();
+  assert.equal(session.isStepMode(), true);
+  assert.equal(session.revealState()!.currentDepth(), 0);
+});
+
+test("nextStep avanza y resetSteps reinicia", () => {
+  const session = new FractalSession();
+  session.enterStepMode();
+  session.nextStep();
+  session.nextStep();
+  assert.equal(session.revealState()!.currentDepth(), 2);
+  session.resetSteps();
+  assert.equal(session.revealState()!.currentDepth(), 0);
+});
+
+test("salir de la seccion descarta el revelado", () => {
+  const session = new FractalSession();
+  session.enterStepMode();
+  session.exitStepMode();
+  assert.equal(session.isStepMode(), false);
+  assert.equal(session.revealState(), null);
+});
+
+test("la profundidad se conserva al cambiar de formula", () => {
+  const session = new FractalSession();
+  session.enterStepMode();
+  session.nextStep();
+  session.nextStep();
+  session.nextStep();
+  session.setFormula("cubic");
+  session.scene(WIDTH, HEIGHT);
+  assert.equal(session.revealState()!.currentDepth(), 3);
+});
+
+test("la profundidad se recorta si el maximo baja al alejar el zoom", () => {
+  const session = new FractalSession();
+  session.zoomAt(2 ** 20, WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT);
+  session.enterStepMode();
+  assert.equal(session.revealState()!.maximum(), 1100);
+  for (let i = 0; i < 600; i += 1) {
+    session.nextStep();
+  }
+  assert.equal(session.revealState()!.currentDepth(), 600);
+  session.resetView();
+  session.scene(WIDTH, HEIGHT);
+  assert.equal(session.revealState()!.maximum(), 100);
+  assert.equal(session.revealState()!.currentDepth(), 100);
+});

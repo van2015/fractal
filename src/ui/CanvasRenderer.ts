@@ -1,5 +1,6 @@
 import type { Palette } from "../domain/Palette.ts";
 import { Rasterizer } from "../domain/Rasterizer.ts";
+import type { StepReveal } from "../domain/StepReveal.ts";
 import type { ZoneMap } from "../domain/ZoneMap.ts";
 
 export class CanvasRenderer {
@@ -25,20 +26,26 @@ export class CanvasRenderer {
     this.bufferContext = bufferContext;
   }
 
-  render(map: ZoneMap, palette: Palette): void {
+  render(map: ZoneMap, palette: Palette, reveal: StepReveal | null = null): void {
     const image = this.ensureBuffer(map);
-    Rasterizer.composeInto(map, palette, image.data, 0, map.height);
+    Rasterizer.composeInto(map, palette, image.data, 0, map.height, reveal);
     this.bufferContext.putImageData(image, 0, 0);
     this.blit();
   }
 
-  renderRows(map: ZoneMap, palette: Palette, yStart: number, yEnd: number): void {
+  renderRows(
+    map: ZoneMap,
+    palette: Palette,
+    yStart: number,
+    yEnd: number,
+    reveal: StepReveal | null = null,
+  ): void {
     const end = Math.min(yEnd, map.height);
     if (end <= yStart) {
       return;
     }
     const image = this.ensureBuffer(map);
-    Rasterizer.composeInto(map, palette, image.data, yStart, end);
+    Rasterizer.composeInto(map, palette, image.data, yStart, end, reveal);
     this.bufferContext.putImageData(image, 0, 0, 0, yStart, map.width, end - yStart);
     this.blit();
   }

@@ -1,5 +1,9 @@
 import type { Palette } from "./Palette.ts";
+import { Rgb } from "./Rgb.ts";
+import type { StepReveal } from "./StepReveal.ts";
 import type { ZoneMap } from "./ZoneMap.ts";
+
+export const NEUTRAL_COLOR = new Rgb(24, 24, 28);
 
 export class Rasterizer {
   static composeInto(
@@ -8,6 +12,8 @@ export class Rasterizer {
     target: Uint8ClampedArray,
     yStart = 0,
     yEnd = map.height,
+    reveal: StepReveal | null = null,
+    neutral: Rgb = NEUTRAL_COLOR,
   ): void {
     const width = map.width;
     const step = map.step;
@@ -17,7 +23,8 @@ export class Rasterizer {
     for (let y = start; y < end; y += step) {
       const maxY = Math.min(y + step, map.height);
       for (let x = 0; x < width; x += step) {
-        const color = palette.colorFor(map.data[map.index(x, y)]);
+        const zone = map.data[map.index(x, y)];
+        const color = reveal && !reveal.isRevealed(zone) ? neutral : palette.colorFor(zone);
         const maxX = Math.min(x + step, width);
         for (let blockY = y; blockY < maxY; blockY += 1) {
           let index = (blockY * width + x) * 4;
