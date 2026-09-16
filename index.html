@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Explorador de Fractales</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <canvas id="fractal"></canvas>
+
+    <div id="hud">
+      <div id="hud-formula">z &lt;- z^2 + c</div>
+      <div id="hud-zoom">x1.0</div>
+    </div>
+
+    <div id="inspect" hidden>paso 0</div>
+
+    <div id="minimap" hidden>
+      <canvas id="minimap-canvas" width="176" height="132"></canvas>
+    </div>
+
+    <div id="toolbar">
+      <div id="forms"></div>
+      <button id="clear" type="button">borrar colores</button>
+      <button id="julia" type="button">ir a Julia</button>
+      <button id="back" type="button" hidden>volver a Mandelbrot</button>
+      <button id="inspect-toggle" type="button" aria-pressed="false">?</button>
+    </div>
+
+    <script type="module" src="./dist/main.js"></script>
+  </body>
+</html>

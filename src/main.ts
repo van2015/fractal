@@ -1,0 +1,210 @@
+import { Complex } from "./domain/Complex.ts";
+import { FractalSession } from "./domain/FractalSession.ts";
+import { FormulaCatalog } from "./domain/FormulaCatalog.ts";
+import type { FormulaId } from "./domain/FormulaCatalog.ts";
+import { CanvasRenderer } from "./ui/CanvasRenderer.ts";
+import { InputController, InputListener } from "./ui/InputController.ts";
+import { Hud } from "./ui/Hud.ts";
+import { FormSelector } from "./ui/FormSelector.ts";
+import { MiniMapView } from "./ui/MiniMapView.ts";
+import { Dom } from "./ui/Dom.ts";
+
+const PROGRESSIVE_STEPS = [8, 4, 2, 1];
+const MAX_RENDER_DIMENSION = 1400;
+const JULIA_BUTTON_LABEL = "ir a Julia";
+const JULIA_PICK_LABEL = "haz click en un punto";
+
+class FractalApp extends InputListener {
+  private readonly session: FractalSession;
+  private readonly catalog: FormulaCatalog;
+  private readonly canvas: HTMLCanvasElement;
+  private readonly renderer: CanvasRenderer;
+  private readonly input: InputController;
+  private readonly hud: Hud;
+  private readonly forms: FormSelector;
+  private readonly miniMap: MiniMapView;
+  private readonly juliaButton: HTMLButtonElement;
+  private readonly backButton: HTMLButtonElement;
+  private readonly inspectButton: HTMLButtonElement;
+  private imageWidth = 1;
+  private imageHeight = 1;
+  private progressiveTimer: number | null = null;
+  private inspection = false;
+  private pickingJulia = false;
+
+  constructor() {
+    super();
+    this.session = new FractalSession();
+    this.catalog = new FormulaCatalog();
+    this.canvas = Dom.require<HTMLCanvasElement>(document, "#fractal");
+    this.renderer = new CanvasRenderer(this.canvas);
+    this.input = new InputController(this.canvas, this);
+    this.hud = new Hud(document);
+    this.forms = new FormSelector(document, this.catalog, this.session.getFormulaId(), (id) =>
+      this.selectFormula(id),
+    );
+    this.miniMap = new MiniMapView(document, (seed) => this.changeSeed(seed));
+    this.juliaButton = Dom.require<HTMLButtonElement>(document, "#julia");
+    this.backButton = Dom.require<HTMLButtonElement>(document, "#back");
+    this.inspectButton = Dom.require<HTMLButtonElement>(document, "#inspect-toggle");
+
+    this.juliaButton.addEventListener("click", () => this.beginJuliaPick());
+    this.backButton.addEventListener("click", () => this.returnToMandelbrot());
+    this.inspectButton.addEventListener("click", () => this.toggleInspection());
+    Dom.require<HTMLButtonElement>(document, "#clear").addEventListener("click", () =>
+      this.clearColors(),
+    );
+    window.addEventListener("resize", () => this.resize());
+
+    this.resize();
+  }
+
+  onZoom(factor: number, x: number, y: number): void {
+    if (this.pickingJulia) {
+      return;
+    }
+    this.session.zoomAt(factor, x, y, this.imageWidth, this.imageHeight);
+    this.requestRender();
+  }
+
+  onPan(dxPixels: number, dyPixels: number): void {
+    if (this.pickingJulia) {
+      return;
+    }
+    this.session.pan(dxPixels, dyPixels, this.imageHeight);
+    this.requestRender();
+  }
+
+  onClick(x: number, y: number): void {
+    if (this.pickingJulia) {
+      const point = this.session
+        .viewport()
+        .toComplex(x, y, this.imageWidth, this.imageHeight);
+      this.session.diveToJulia(point);
+      this.pickingJulia = false;
+      this.updateChrome();
+      this.requestRender();
+      return;
+    }
+    this.session.paintAt(x, y);
+    this.redraw();
+  }
+
+  onHover(x: number, y: number): void {
+    if (!this.inspection) {
+      return;
+    }
+    const map = this.session.currentZoneMap();
+    if (!map) {
+      return;
+    }
+    this.hud.showInspection(map.zoneAt(Math.floor(x), Math.floor(y)));
+  }
+
+  onLeave(): void {
+    this.hud.hideInspection();
+  }
+
+  private resize(): void {
+    const ratio = window.devicePixelRatio || 1;
+    this.canvas.width = Math.floor(window.innerWidth * ratio);
+    this.canvas.height = Math.floor(window.innerHeight * ratio);
+
+    const scale = Math.min(
+      1,
+      MAX_RENDER_DIMENSION / Math.max(window.innerWidth, window.innerHeight),
+    );
+    this.imageWidth = Math.max(1, Math.floor(window.innerWidth * scale));
+    this.imageHeight = Math.max(1, Math.floor(window.innerHeight * scale));
+    this.input.setImageSize(this.imageWidth, this.imageHeight);
+    this.requestRender();
+  }
+
+  private requestRender(): void {
+    this.cancelProgressive();
+    let index = 0;
+    const run = (): void => {
+      const step = PROGRESSIVE_STEPS[index] as number;
+      const map = this.session.render(this.imageWidth, this.imageHeight, step);
+      this.renderer.render(map, this.session.paletteRef());
+      index += 1;
+      if (index < PROGRESSIVE_STEPS.length) {
+        this.progressiveTimer = window.setTimeout(run, 0);
+      } else {
+        this.progressiveTimer = null;
+      }
+    };
+    run();
+    this.updateChrome();
+  }
+
+  private redraw(): void {
+    const map = this.session.currentZoneMap();
+    if (map) {
+      this.renderer.render(map, this.session.paletteRef());
+    }
+  }
+
+  private updateChrome(): void {
+    this.hud.updateFormula(this.session.formula().label);
+    this.hud.updateZoom(this.session.zoomFactor());
+    this.forms.select(this.session.getFormulaId());
+
+    const julia = this.session.isJulia();
+    this.miniMap.setVisible(julia);
+    this.backButton.hidden = !julia;
+    this.juliaButton.hidden = julia;
+    this.juliaButton.textContent = JULIA_BUTTON_LABEL;
+    this.juliaButton.classList.toggle("active", this.pickingJulia);
+    if (julia) {
+      this.miniMap.draw(this.session.seedValue());
+    }
+  }
+
+  private selectFormula(id: FormulaId): void {
+    this.session.setFormula(id);
+    this.forms.select(id);
+    this.requestRender();
+  }
+
+  private changeSeed(seed: Complex): void {
+    this.session.setSeed(seed);
+    this.requestRender();
+  }
+
+  private clearColors(): void {
+    this.session.clearColors();
+    this.redraw();
+  }
+
+  private beginJuliaPick(): void {
+    this.pickingJulia = true;
+    this.juliaButton.textContent = JULIA_PICK_LABEL;
+    this.juliaButton.classList.add("active");
+  }
+
+  private returnToMandelbrot(): void {
+    this.session.backToMandelbrot();
+    this.pickingJulia = false;
+    this.updateChrome();
+    this.requestRender();
+  }
+
+  private toggleInspection(): void {
+    this.inspection = !this.inspection;
+    this.inspectButton.classList.toggle("active", this.inspection);
+    this.inspectButton.setAttribute("aria-pressed", String(this.inspection));
+    if (!this.inspection) {
+      this.hud.hideInspection();
+    }
+  }
+
+  private cancelProgressive(): void {
+    if (this.progressiveTimer !== null) {
+      window.clearTimeout(this.progressiveTimer);
+      this.progressiveTimer = null;
+    }
+  }
+}
+
+new FractalApp();

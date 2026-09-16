@@ -1,0 +1,17 @@
+{
+  "name": "fractal-explorer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Explorador de fractales educativo para ninos (navegador de escritorio)",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "node --test",
+    "serve": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.3",
+    "typescript": "^5.7.2"
+  }
+}
