@@ -1,16 +1,32 @@
 import { FractalGenerator } from "./FractalGenerator.ts";
 import type { FractalScene } from "./FractalScene.ts";
+import { Projection } from "./Projection.ts";
 import { ZoneMap } from "./ZoneMap.ts";
 
 export class EscapeTimeGenerator extends FractalGenerator {
   generate(scene: FractalScene, width: number, height: number, step = 1): ZoneMap {
     const map = new ZoneMap(width, height, step);
-    for (let y = 0; y < height; y += step) {
+    this.generateRows(scene, width, height, 0, height, step, map);
+    return map;
+  }
+
+  generateRows(
+    scene: FractalScene,
+    width: number,
+    height: number,
+    yStart: number,
+    yEnd: number,
+    step: number,
+    map: ZoneMap,
+  ): void {
+    const projection = Projection.fromViewport(scene.viewport, width, height);
+    const start = yStart - (yStart % step);
+    const end = Math.min(yEnd, height);
+    for (let y = start; y < end; y += step) {
+      const im = projection.imAt(y);
       for (let x = 0; x < width; x += step) {
-        const point = scene.viewport.toComplex(x, y, width, height);
-        map.setZone(x, y, scene.zoneAt(point));
+        map.setZone(x, y, scene.zoneAtScalar(projection.reAt(x), im));
       }
     }
-    return map;
   }
 }

@@ -26,4 +26,12 @@ export class ZoneMap {
   setZone(x: number, y: number, zone: number): void {
     this.data[this.index(x, y)] = zone;
   }
+
+  copyUpsampledFrom(source: ZoneMap): void {
+    for (let y = 0; y < this.height; y += 1) {
+      for (let x = 0; x < this.width; x += 1) {
+        this.data[this.index(x, y)] = source.zoneAt(x, y);
+      }
+    }
+  }
 }

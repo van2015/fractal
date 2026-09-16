@@ -9,7 +9,7 @@ import { FractalScene } from "../src/domain/FractalScene.ts";
 import { EscapeTimeGenerator } from "../src/domain/EscapeTimeGenerator.ts";
 import { UNCOMPUTED_ZONE } from "../src/domain/ZoneMap.ts";
 import { IterationSchedule } from "../src/domain/IterationSchedule.ts";
-import { ProgressiveRenderer } from "../src/domain/ProgressiveRenderer.ts";
+import { ZoneMap } from "../src/domain/ZoneMap.ts";
 
 const WIDTH = 40;
 const HEIGHT = 30;
@@ -57,14 +57,34 @@ test("el render progresivo es coherente con el completo", () => {
   }
 });
 
-test("el render progresivo refina hasta completarse", () => {
-  const renderer = new ProgressiveRenderer(new EscapeTimeGenerator(), scene(), WIDTH, HEIGHT, 4);
-  assert.equal(renderer.map().step, 4);
-  assert.equal(renderer.isComplete(), false);
-  assert.equal(renderer.refine(), true);
-  assert.equal(renderer.map().step, 2);
-  assert.equal(renderer.refine(), true);
-  assert.equal(renderer.map().step, 1);
-  assert.equal(renderer.isComplete(), true);
-  assert.equal(renderer.refine(), false);
+test("generar por filas produce el mismo mapa que generate", () => {
+  const generator = new EscapeTimeGenerator();
+  for (const step of [1, 2, 4]) {
+    const reference = generator.generate(scene(), WIDTH, HEIGHT, step);
+    const chunked = new ZoneMap(WIDTH, HEIGHT, step);
+    for (let y = 0; y < HEIGHT; y += 7) {
+      generator.generateRows(scene(), WIDTH, HEIGHT, y, y + 7, step, chunked);
+    }
+    assert.deepEqual([...chunked.data], [...reference.data], `step ${step}`);
+  }
+});
+
+test("el mapa escalar es identico al calculado con Complex", () => {
+  const generator = new EscapeTimeGenerator();
+  const viewport = Viewport.default();
+  const reference = new FractalScene(
+    new Square(),
+    new MandelbrotMode(),
+    new Complex(0, 0),
+    50,
+    4,
+    viewport,
+  );
+  const map = generator.generate(reference, WIDTH, HEIGHT, 1);
+  for (let y = 0; y < HEIGHT; y += 1) {
+    for (let x = 0; x < WIDTH; x += 1) {
+      const point = viewport.toComplex(x, y, WIDTH, HEIGHT);
+      assert.equal(map.data[map.index(x, y)], reference.zoneAt(point), `pixel (${x}, ${y})`);
+    }
+  }
 });

@@ -52,9 +52,11 @@ Así se conserva la polimorfia de la clase sin asignar `Complex` por píxel. `Fr
 
 `Palette` añade una caché `Map<number, Rgb>` para el color por defecto, de modo que `Rgb.fromHsl` se ejecuta una vez por id de zona y no por píxel. Los overrides siguen teniendo prioridad. La caché se limpia con `clear()` (mismo punto que descarta overrides); su tamaño está acotado por el número de zonas (paso máximo + interior).
 
-### 5. Render por bloques y a resolución reducida
+### 5. Render por bloques y actualización parcial
 
-`CanvasRenderer.render` deja de llamar a `map.zoneAt` por píxel. Recorre la imagen con el paso del mapa y rellena bloques de `step × step`, reduciendo las llamadas a `colorFor` en un factor `step²`. El resto de la imagen se escala con `drawImage` como hasta ahora.
+La composición de píxeles se extrae a una clase de dominio `Rasterizer`, que no depende del DOM y por tanto es testeable. `Rasterizer.composeInto(map, palette, target, yStart, yEnd)` recorre con el paso del mapa y rellena bloques de `step × step` (reduciendo las llamadas a `colorFor` en un factor `step²`) y acepta un rango de filas para actualizaciones parciales.
+
+`CanvasRenderer` conserva un `ImageData` persistente y expone `render` (imagen completa) y `renderRows` (solo las filas cambiadas, con `putImageData` y su rectángulo sucio). El escalado final se hace con `drawImage` como hasta ahora.
 
 ### 6. Render final troceado e interrumpible
 
@@ -63,12 +65,16 @@ Se añade un `RenderScheduler` (capa de interfaz) que sustituye al bucle actual 
 ```
    peticion de render
      ├─ cancela lo pendiente
-     ├─ dibuja el paso grueso (barato) al instante
-     └─ trocea el paso fino con requestAnimationFrame
+     ├─ genera el mapa grueso y prellena con el un mapa fino
+     │    (ZoneMap.copyUpsampledFrom) -> todos los pixeles tienen zona valida
+     ├─ dibuja ese mapa (completo, bloqueado) al instante
+     └─ trocea el afinado con requestAnimationFrame
           - procesa filas hasta agotar un presupuesto de tiempo (~8 ms)
-          - redibuja al cerrar cada trozo
+          - redibuja SOLO las filas nuevas (CanvasRenderer.renderRows)
           - si llega otra peticion, cancela y reinicia
 ```
+
+El prellenado con el mapa grueso garantiza que, durante el afinado, cualquier píxel tenga una zona válida: pintar sobre la imagen en refinado funciona y no aparecen artefactos de zona "sin calcular".
 
 `EscapeTimeGenerator` gana `generateRows(scene, width, height, yStart, yEnd, step, map)` que escribe en un `ZoneMap` existente, para que el planificador avance por filas sin recalcular. `requestRender` de `main.ts` pasa a delegar en el planificador.
 

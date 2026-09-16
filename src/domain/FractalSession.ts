@@ -122,6 +122,10 @@ export class FractalSession {
     return this.currentMap;
   }
 
+  setCurrentMap(map: ZoneMap): void {
+    this.currentMap = map;
+  }
+
   visibleZones(map: ZoneMap): number[] {
     const zones = new Set<number>();
     for (const zone of map.data) {

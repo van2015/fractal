@@ -5,14 +5,25 @@ const INTERIOR_COLOR = new Rgb(12, 12, 18);
 
 export class Palette {
   private readonly overrides: Map<number, Rgb>;
+  private readonly defaults: Map<number, Rgb>;
 
   constructor() {
     this.overrides = new Map<number, Rgb>();
+    this.defaults = new Map<number, Rgb>();
   }
 
   colorFor(zone: number): Rgb {
     const override = this.overrides.get(zone);
-    return override ?? this.defaultColor(zone);
+    if (override) {
+      return override;
+    }
+    const cached = this.defaults.get(zone);
+    if (cached) {
+      return cached;
+    }
+    const color = this.defaultColor(zone);
+    this.defaults.set(zone, color);
+    return color;
   }
 
   isPainted(zone: number): boolean {
@@ -25,6 +36,7 @@ export class Palette {
 
   clear(): void {
     this.overrides.clear();
+    this.defaults.clear();
   }
 
   paintedZones(): number[] {

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Complex } from "../src/domain/Complex.ts";
+import { ComplexBuffer } from "../src/domain/ComplexBuffer.ts";
 import { Formula, INTERIOR_ZONE } from "../src/domain/Formula.ts";
 import { Square } from "../src/domain/formulas/Square.ts";
 import { Cubic } from "../src/domain/formulas/Cubic.ts";
@@ -17,8 +18,9 @@ const ESCAPE_RADIUS_SQUARED = 4;
 class Doubling extends Formula {
   readonly label = "2z";
 
-  apply(z: Complex): Complex {
-    return z.multiply(new Complex(2, 0));
+  applyInto(z: ComplexBuffer): void {
+    z.re *= 2;
+    z.im *= 2;
   }
 }
 

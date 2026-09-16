@@ -7,9 +7,9 @@ import { InputController, InputListener } from "./ui/InputController.ts";
 import { Hud } from "./ui/Hud.ts";
 import { FormSelector } from "./ui/FormSelector.ts";
 import { MiniMapView } from "./ui/MiniMapView.ts";
+import { RenderScheduler } from "./ui/RenderScheduler.ts";
 import { Dom } from "./ui/Dom.ts";
 
-const PROGRESSIVE_STEPS = [8, 4, 2, 1];
 const MAX_RENDER_DIMENSION = 1400;
 const JULIA_BUTTON_LABEL = "ir a Julia";
 const JULIA_PICK_LABEL = "haz click en un punto";
@@ -19,6 +19,7 @@ class FractalApp extends InputListener {
   private readonly catalog: FormulaCatalog;
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: CanvasRenderer;
+  private readonly scheduler: RenderScheduler;
   private readonly input: InputController;
   private readonly hud: Hud;
   private readonly forms: FormSelector;
@@ -28,7 +29,6 @@ class FractalApp extends InputListener {
   private readonly inspectButton: HTMLButtonElement;
   private imageWidth = 1;
   private imageHeight = 1;
-  private progressiveTimer: number | null = null;
   private inspection = false;
   private pickingJulia = false;
 
@@ -38,6 +38,7 @@ class FractalApp extends InputListener {
     this.catalog = new FormulaCatalog();
     this.canvas = Dom.require<HTMLCanvasElement>(document, "#fractal");
     this.renderer = new CanvasRenderer(this.canvas);
+    this.scheduler = new RenderScheduler(this.session, this.renderer);
     this.input = new InputController(this.canvas, this);
     this.hud = new Hud(document);
     this.forms = new FormSelector(document, this.catalog, this.session.getFormulaId(), (id) =>
@@ -117,24 +118,12 @@ class FractalApp extends InputListener {
     this.imageWidth = Math.max(1, Math.floor(window.innerWidth * scale));
     this.imageHeight = Math.max(1, Math.floor(window.innerHeight * scale));
     this.input.setImageSize(this.imageWidth, this.imageHeight);
+    this.scheduler.setSize(this.imageWidth, this.imageHeight);
     this.requestRender();
   }
 
   private requestRender(): void {
-    this.cancelProgressive();
-    let index = 0;
-    const run = (): void => {
-      const step = PROGRESSIVE_STEPS[index] as number;
-      const map = this.session.render(this.imageWidth, this.imageHeight, step);
-      this.renderer.render(map, this.session.paletteRef());
-      index += 1;
-      if (index < PROGRESSIVE_STEPS.length) {
-        this.progressiveTimer = window.setTimeout(run, 0);
-      } else {
-        this.progressiveTimer = null;
-      }
-    };
-    run();
+    this.scheduler.request();
     this.updateChrome();
   }
 
@@ -196,13 +185,6 @@ class FractalApp extends InputListener {
     this.inspectButton.setAttribute("aria-pressed", String(this.inspection));
     if (!this.inspection) {
       this.hud.hideInspection();
-    }
-  }
-
-  private cancelProgressive(): void {
-    if (this.progressiveTimer !== null) {
-      window.clearTimeout(this.progressiveTimer);
-      this.progressiveTimer = null;
     }
   }
 }

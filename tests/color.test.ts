@@ -33,6 +33,20 @@ test("pintar una zona guarda su color y borrar lo descarta", () => {
   assert.equal(palette.colorFor(3).toCss(), antes.toCss());
 });
 
+test("el color por defecto se memoiza por zona", () => {
+  const palette = new Palette();
+  assert.equal(palette.colorFor(7), palette.colorFor(7));
+});
+
+test("borrar colores vacia la cache de por defecto", () => {
+  const palette = new Palette();
+  const antes = palette.colorFor(7);
+  palette.clear();
+  const despues = palette.colorFor(7);
+  assert.notEqual(antes, despues);
+  assert.equal(antes.toCss(), despues.toCss());
+});
+
 test("el elegidor evita los colores ya usados entre las zonas visibles", () => {
   const palette = new Palette();
   const rojo = new Rgb(230, 60, 60);
