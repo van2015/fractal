@@ -14,28 +14,64 @@ hace zoom hasta el infinito y se pintan las zonas matemáticas que se descubren.
   semilla con un mini-mapa.
 - HUD con la fórmula y el nivel de zoom; el botón `?` revela el paso de escape
   bajo el cursor.
+- Sección de **paso a paso**: con el botón "next" se revela el fractal iteración
+  a iteración, viendo cómo la fórmula lo va "dibujando".
 
-## Empezar
+## Ejecutar el proyecto
 
-Requisitos: Node 23.6+ (usa type-stripping nativo) y pnpm.
+### Requisitos
 
-    pnpm install
-    pnpm build      # compila TypeScript a dist/
-    pnpm serve      # http://localhost:8080
+- **Node 23.6+** (usa el type-stripping nativo para correr los tests en
+  TypeScript sin compilar). En Node 22.6–23.5 habría que añadir
+  `--experimental-strip-types` al script de tests.
+- **pnpm** (el proyecto trae `pnpm-lock.yaml`). También sirve `npm` si lo
+  prefieres.
 
-Pruebas y comprobación de tipos:
+### Puesta en marcha
 
-    pnpm test
-    pnpm typecheck
+```bash
+# 1. Instalar dependencias (solo TypeScript y los tipos de Node)
+pnpm install
+
+# 2. Compilar el dominio y la interfaz de TypeScript a dist/
+pnpm build
+
+# 3. Levantar el servidor estático
+pnpm serve
+```
+
+Después abre **http://localhost:8080** en el navegador.
+
+> `index.html` carga `./dist/main.js`, así que hay que ejecutar `pnpm build`
+> **antes** de `pnpm serve`, y volver a compilar tras cada cambio en `src/`.
+
+### Scripts disponibles
+
+| Comando | Qué hace |
+|---|---|
+| `pnpm build` | Compila `src/` (TypeScript) a `dist/` (JavaScript de navegador). |
+| `pnpm serve` | Sirve el proyecto en `http://localhost:8080` (`PORT` configurable). |
+| `pnpm test` | Ejecuta los tests del dominio con el runner nativo de Node. |
+| `pnpm typecheck` | Comprueba los tipos de `src/` y de `tests/` sin emitir. |
+
+### Flujo de desarrollo
+
+```bash
+pnpm typecheck   # comprobar tipos
+pnpm test        # correr los tests
+pnpm build       # recompilar y recargar el navegador
+```
 
 ## Cómo funciona
 
 El núcleo separa el cálculo del color:
 
-    [ fórmula ] -> mapa de escape (Int32Array: un paso por píxel)
-                        |
-                        v
-                 paleta[zona] -> color -> canvas
+```
+[ fórmula ] -> mapa de escape (Int32Array: un paso por píxel)
+                    |
+                    v
+             paleta[zona] -> color -> canvas
+```
 
 - Una zona = un paso de escape.
 - Pintar solo cambia la paleta (instantáneo); no recalcula la fórmula.
@@ -47,11 +83,13 @@ El núcleo separa el cálculo del color:
 
 ## Estructura
 
-    src/domain/   lógica pura, sin DOM (fórmulas, mapa de escape, paleta, vista...)
-    src/ui/       render en canvas, entrada, HUD, mini-mapa
-    src/main.ts   orquesta la app
-    tests/        tests del dominio (sin tests de UI)
-    openspec/     specs y cambios (OpenSpec)
+```
+src/domain/   lógica pura, sin DOM (fórmulas, mapa de escape, paleta, vista...)
+src/ui/       render en canvas, entrada, HUD, mini-mapa
+src/main.ts   orquesta la app
+tests/        tests del dominio (sin tests de UI)
+openspec/     specs y cambios (OpenSpec)
+```
 
 ## Tests
 
@@ -61,8 +99,8 @@ TypeScript. No hay dependencias de runtime.
 ## Especificaciones
 
 El comportamiento está descrito en las specs de `openspec/specs/`:
-`fractal-formula`, `fractal-navigation`, `fractal-coloring` y `fractal-interface`.
-Los cambios se proponen y archivan con OpenSpec.
+`fractal-formula`, `fractal-navigation`, `fractal-coloring`, `fractal-interface`
+y `fractal-step-by-step`. Los cambios se proponen y archivan con OpenSpec.
 
 ## Alcance
 
