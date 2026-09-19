@@ -26,6 +26,14 @@ The system SHALL allow the view to be moved by dragging with the mouse, without 
 - **WHEN** the child holds the mouse down and drags it over the canvas
 - **THEN** the image moves following the motion and the zoom level does not change
 
+#### Scenario: The cursor stays inside the canvas during pan
+- **WHEN** the child holds the mouse down and drags to move the view
+- **THEN** the cursor is confined to the canvas and does not leave it
+
+#### Scenario: Panning stops at the edge when confinement is unavailable
+- **WHEN** the cursor cannot be confined and the child keeps dragging beyond the edge of the canvas
+- **THEN** the view stops moving at that edge
+
 ### Requirement: Distinguishing drag from click
 
 The system SHALL distinguish a drag from a click, so that moving the view does not trigger the painting action.
